@@ -106,6 +106,30 @@ export const InstructorDashboardAPI = {
   }
 };
 
+export const StudentAPI = {
+  getOverview: async (studentId: string) => {
+    await delay(800);
+    return {
+      stats: [
+        { title: 'Courses in Progress', value: '3', change: '+1' },
+        { title: 'Completed Courses', value: '12', change: '+2' },
+        { title: 'Certificates Earned', value: '5', change: '+1' },
+        { title: 'Hours Learned', value: '1,240', change: '+12' },
+      ],
+      enrolledCourses: [
+        { id: 'c1', title: 'Advanced React Patterns', instructor: 'Sarah Drasner', progress: 65, totalMins: 480, completedMins: 312, thumbnail: 'https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&q=80' },
+        { id: 'c2', title: 'UI/UX Design Masterclass', instructor: 'Gary Simon', progress: 24, totalMins: 600, completedMins: 144, thumbnail: 'https://images.unsplash.com/photo-1561070791-2526d30994b5?w=800&q=80' },
+        { id: 'c3', title: 'Node.js Backend Architecture', instructor: 'Brad Traversy', progress: 12, totalMins: 320, completedMins: 38, thumbnail: 'https://images.unsplash.com/photo-1627398225058-612f4306b9b2?w=800&q=80' },
+      ],
+      baseHoursLearned: 1240
+    };
+  },
+  markLessonComplete: async (studentId: string, courseId: string, durationMins: number) => {
+    await delay(500);
+    return { success: true };
+  }
+};
+
 const MOCK_COURSES: Course[] = [
   { id: '1', title: 'Advanced React Patterns', description: 'Master React...', instructorId: 'inst-1', instructorName: 'Sarah Drasner', price: 99, studentsCount: 1200, thumbnail: 'https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&q=80', status: 'published' },
   { id: '2', title: 'UI/UX Design Masterclass', description: 'Learn design...', instructorId: 'inst-1', instructorName: 'Sarah Drasner', price: 149, studentsCount: 850, thumbnail: 'https://images.unsplash.com/photo-1561070791-2526d30994b5?w=800&q=80', status: 'published' },
