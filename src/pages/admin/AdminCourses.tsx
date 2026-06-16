@@ -1,23 +1,28 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Search, Plus, Filter, MoreVertical, UploadCloud, Loader2 } from 'lucide-react';
 import { Course } from '../../types';
 import CourseCreationForm from '../../components/admin/CourseCreationForm';
 import { CourseAPI } from '../../services/api';
 
-const mockCourses: Course[] = [
-  { id: '1', title: 'Advanced React Patterns', description: 'Master React...', instructorId: 'i1', instructorName: 'Sarah Drasner', price: 99, studentsCount: 1200, thumbnail: 'https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&q=80', status: 'published' },
-  { id: '2', title: 'Complete Node.js Bootcamp', description: 'Backend...', instructorId: 'i2', instructorName: 'Brad Traversy', price: 149, studentsCount: 850, thumbnail: 'https://images.unsplash.com/photo-1627398225058-612f4306b9b2?w=800&q=80', status: 'published' },
-  { id: '3', title: 'UI/UX Design for absolute beginners', description: 'Design...', instructorId: 'i3', instructorName: 'Gary Simon', price: 79, studentsCount: 2100, thumbnail: 'https://images.unsplash.com/photo-1561070791-2526d30994b5?w=800&q=80', status: 'published' },
-  { id: '4', title: 'Machine Learning A-Z', description: 'AI...', instructorId: 'i4', instructorName: 'Kirill Eremenko', price: 199, studentsCount: 3200, thumbnail: 'https://images.unsplash.com/photo-1555949963-aa79dcee981c?w=800&q=80', status: 'draft' },
-];
-
 export default function AdminCourses() {
   const [isCreatingCourse, setIsCreatingCourse] = useState(false);
-  const [courses, setCourses] = useState<Course[]>(mockCourses);
+  const [courses, setCourses] = useState<Course[]>([]);
   const [uploadError, setUploadError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    CourseAPI.getCourses().then(data => {
+      if (mounted) {
+        setCourses(data);
+        setIsLoading(false);
+      }
+    });
+    return () => { mounted = false; };
+  }, []);
 
   const handleSaveCourse = async (data: any) => {
     setIsSaving(true);
@@ -163,56 +168,69 @@ export default function AdminCourses() {
       </AnimatePresence>
 
       <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-slate-50 border-b border-slate-200">
-                <th className="px-6 py-4 text-sm font-medium text-slate-500">Course</th>
-                <th className="px-6 py-4 text-sm font-medium text-slate-500">Instructor</th>
-                <th className="px-6 py-4 text-sm font-medium text-slate-500">Price</th>
-                <th className="px-6 py-4 text-sm font-medium text-slate-500">Students</th>
-                <th className="px-6 py-4 text-sm font-medium text-slate-500">Status</th>
-                <th className="px-6 py-4 text-sm font-medium text-slate-500 rounded-tr-2xl text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {courses.map((course, i) => (
-                <motion.tr 
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.05 }}
-                  key={course.id} 
-                  className="hover:bg-slate-50/50 transition-colors"
-                >
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3 shrink-0">
-                      <img src={course.thumbnail} alt={course.title} className="w-12 h-12 rounded-lg object-cover bg-slate-100" />
-                      <div>
-                        <p className="text-sm font-semibold text-slate-900">{course.title}</p>
-                        <p className="text-xs text-slate-500 truncate max-w-[200px]">{course.description}</p>
+        {isLoading ? (
+          <div className="p-12 flex justify-center items-center">
+            <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
+          </div>
+        ) : courses.length === 0 ? (
+          <div className="p-12 text-center">
+            <h3 className="text-lg font-medium text-slate-800">No courses available</h3>
+            <p className="text-slate-500 mt-2">Get started by creating a new course or uploading a CSV.</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-200">
+                  <th className="px-6 py-4 text-sm font-medium text-slate-500">Course</th>
+                  <th className="px-6 py-4 text-sm font-medium text-slate-500">Category</th>
+                  <th className="px-6 py-4 text-sm font-medium text-slate-500">Instructor</th>
+                  <th className="px-6 py-4 text-sm font-medium text-slate-500">Price</th>
+                  <th className="px-6 py-4 text-sm font-medium text-slate-500">Students</th>
+                  <th className="px-6 py-4 text-sm font-medium text-slate-500">Status</th>
+                  <th className="px-6 py-4 text-sm font-medium text-slate-500 rounded-tr-2xl text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {courses.map((course, i) => (
+                  <motion.tr 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.05 }}
+                    key={course.id} 
+                    className="hover:bg-slate-50/50 transition-colors"
+                  >
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3 shrink-0">
+                        <img src={course.thumbnail} alt={course.title} className="w-12 h-12 rounded-lg object-cover bg-slate-100" />
+                        <div>
+                          <p className="text-sm font-semibold text-slate-900">{course.title}</p>
+                          <p className="text-xs text-slate-500 truncate max-w-[200px]">{course.description}</p>
+                        </div>
                       </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-slate-700 whitespace-nowrap">{course.instructorName}</td>
-                  <td className="px-6 py-4 text-sm text-slate-700 font-medium whitespace-nowrap">${course.price}</td>
-                  <td className="px-6 py-4 text-sm text-slate-700 whitespace-nowrap">{course.studentsCount}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize ${
-                      course.status === 'published' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
-                    }`}>
-                      {course.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <button className="p-2 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-colors">
-                      <MoreVertical className="w-5 h-5" />
-                    </button>
-                  </td>
-                </motion.tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-slate-700 whitespace-nowrap">{course.category || 'General'}</td>
+                    <td className="px-6 py-4 text-sm text-slate-700 whitespace-nowrap">{course.instructorName}</td>
+                    <td className="px-6 py-4 text-sm text-slate-700 font-medium whitespace-nowrap">${course.price}</td>
+                    <td className="px-6 py-4 text-sm text-slate-700 whitespace-nowrap">{course.studentsCount}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize ${
+                        course.status === 'published' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+                      }`}>
+                        {course.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <button className="p-2 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-colors">
+                        <MoreVertical className="w-5 h-5" />
+                      </button>
+                    </td>
+                  </motion.tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );

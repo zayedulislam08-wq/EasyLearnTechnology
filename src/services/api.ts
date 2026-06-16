@@ -1,6 +1,43 @@
+import { doc, getDoc, setDoc, collection, getDocs, query, where, addDoc } from 'firebase/firestore';
+import { db } from '../config/firebase';
 import { Course } from '../types';
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+export const AuthAPI = {
+  getUserProfile: async (firebaseUid: string, email?: string | null) => {
+    // Try to get from Firestore
+    const userRef = doc(db, 'users', firebaseUid);
+    const userSnap = await getDoc(userRef);
+
+    if (userSnap.exists()) {
+      return { id: firebaseUid, ...userSnap.data() } as any;
+    }
+
+    // If it doesn't exist, let's create a default record in Firestore.
+    // Specially for zayedulislam08@gmail.com, set role to 'admin'
+    let defaultRole = 'student';
+    if (email === 'zayedulislam08@gmail.com') {
+      defaultRole = 'admin';
+    }
+
+    const newUserProfile = {
+      name: email ? email.split('@')[0] : 'New User',
+      email: email || '',
+      role: defaultRole,
+      createdAt: new Date().toISOString()
+    };
+
+    try {
+      await setDoc(userRef, newUserProfile);
+    } catch (e) {
+      console.warn("Failed to create user doc automatically. Using mock profile.", e);
+      return { id: firebaseUid, ...newUserProfile };
+    }
+
+    return { id: firebaseUid, ...newUserProfile };
+  }
+};
 
 export const AnalyticsAPI = {
   getOverview: async () => {
@@ -138,28 +175,42 @@ const MOCK_COURSES: Course[] = [
 
 export const CourseAPI = {
   getCourses: async (instructorId?: string): Promise<Course[]> => {
-    await delay(800);
-    if (instructorId) {
-      return MOCK_COURSES.filter(c => c.instructorId === instructorId);
+    try {
+      let q = query(collection(db, 'courses'));
+      if (instructorId) {
+        q = query(collection(db, 'courses'), where('instructorId', '==', instructorId));
+      }
+      const snapshot = await getDocs(q);
+      const courses: Course[] = [];
+      snapshot.forEach(doc => {
+        courses.push({ id: doc.id, ...doc.data() } as Course);
+      });
+      return courses.sort((a, b) => a.title.localeCompare(b.title));
+    } catch (error) {
+      console.error("Error fetching courses:", error);
+      return [];
     }
-    return MOCK_COURSES;
   },
   createCourse: async (courseData: any): Promise<{ success: boolean; course: Course }> => {
-    await delay(1500); // Simulate network latency and processing
-    
-    // Server-side shape mapping mock
-    const newCourse: Course = {
-      id: Math.random().toString(36).substr(2, 9),
-      title: courseData.title,
-      description: courseData.description,
-      price: courseData.price,
-      status: courseData.status || 'draft',
-      instructorId: courseData.instructorId || 'admin',
-      instructorName: courseData.instructorName || 'Admin',
-      studentsCount: 0,
-      thumbnail: 'https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&q=80'
-    };
+    try {
+      const newCourseData = {
+        title: courseData.title,
+        description: courseData.description,
+        price: courseData.price,
+        category: courseData.category || 'General',
+        status: courseData.status || 'draft',
+        instructorId: courseData.instructorId || 'admin',
+        instructorName: courseData.instructorName || 'Admin',
+        studentsCount: 0,
+        thumbnail: courseData.thumbnail || 'https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&q=80',
+        createdAt: new Date().toISOString()
+      };
 
-    return { success: true, course: newCourse };
+      const docRef = await addDoc(collection(db, 'courses'), newCourseData);
+      return { success: true, course: { id: docRef.id, ...newCourseData } as Course };
+    } catch (error) {
+      console.error("Error creating course:", error);
+      throw error;
+    }
   }
 };

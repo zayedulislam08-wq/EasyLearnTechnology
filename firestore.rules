@@ -1,0 +1,44 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+  
+    // Helper functions for checking user roles
+    function getUserData(uid) {
+      return get(/databases/$(database)/documents/users/$(uid)).data;
+    }
+    
+    function isAdmin() {
+      return request.auth != null && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData(request.auth.uid).role == 'admin';
+    }
+    
+    function isInstructor() {
+      return request.auth != null && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData(request.auth.uid).role == 'instructor';
+    }
+    
+    function isStudent() {
+      return request.auth != null && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData(request.auth.uid).role == 'student';
+    }
+    
+    function isOwner(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    match /users/{userId} {
+      // Anyone can create their own profile during sign up
+      allow create: if isOwner(userId);
+      // Users can read and update their own document. Admins can read or update broadly.
+      allow read, update: if isOwner(userId) || isAdmin();
+      // Only admins can delete profiles
+      allow delete: if isAdmin();
+    }
+    
+    match /courses/{courseId} {
+      // Anyone authenticated can read published courses
+      allow read: if request.auth != null && (resource.data.status == 'published' || isAdmin() || (isInstructor() && resource.data.instructorId == request.auth.uid));
+      // Only instructors and admins can create courses
+      allow create: if isInstructor() || isAdmin();
+      // Instructors can only update their own courses
+      allow update, delete: if isAdmin() || (isInstructor() && resource.data.instructorId == request.auth.uid);
+    }
+  }
+}

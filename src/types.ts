@@ -18,6 +18,7 @@ export interface Course {
   studentsCount: number;
   thumbnail: string;
   status: 'published' | 'draft';
+  category?: string;
 }
 
 export interface DigitalService {
